@@ -16,7 +16,6 @@ public class GameManager : MonoBehaviour
         CodeBreakerThink,
         CodeBreakerTry,
         CodeMakerAnswer,
-        BullFound,
         Win
     }
     #endregion
@@ -128,14 +127,6 @@ public class GameManager : MonoBehaviour
                 SetCodeBreakerThink();
             }
         }
-        else if(gamestate == Gamestate.BullFound)
-        {
-            deltaTime += Time.deltaTime;
-            if(deltaTime >= 2 * waitingTime || demo == true)
-            {
-                gamestate = Gamestate.CodeBreakerTry;
-            }
-        }
         else if(gamestate == Gamestate.Win)
         {
             deltaTime += Time.deltaTime;
@@ -169,7 +160,7 @@ public class GameManager : MonoBehaviour
         demo = true;
         for (int i = 0; i < 4; i++)
         {
-            codeMakerValue[i] = GenerateValidDigit();
+            codeMakerValue[i] = GenerateValidDigit(codeMakerValue);
         }
         SetValueAccepted();
     }
@@ -194,9 +185,19 @@ public class GameManager : MonoBehaviour
         {
             string temp_str = codemakerInputField.text;
 
+            if(temp_str.Length < 4 || temp_str.Length > 4)
+            {
+                SetValueDenied();
+                return;
+            }
             for (int i = 0; i < 4; i++)
             {
                 codeMakerValue[i] = (int)Char.GetNumericValue(temp_str[i]);
+                if(codeMakerValue[i] < 0)
+                {
+                    SetValueDenied();
+                    return;
+                }
             }
 
             for (int i = 0; i < 4; i++)
@@ -294,7 +295,7 @@ public class GameManager : MonoBehaviour
         {
             for (int i = 0; i < 4; i++)
             {
-                codeBreakerAttempt[i] = GenerateValidDigit();
+                codeBreakerAttempt[i] = GenerateValidDigit(codeBreakerAttempt);
             }
         }
         // when have bulls but don't know where
@@ -415,7 +416,7 @@ public class GameManager : MonoBehaviour
     // Helper Functions
 
     #region GenerateValidDigit
-    int GenerateValidDigit()
+    int GenerateValidDigit(int[] array)
     {
         int aux = 0;
         for (int i = 0; i < 1; i++)
@@ -423,7 +424,7 @@ public class GameManager : MonoBehaviour
             aux = UnityEngine.Random.Range(0, 10);
             for (int j = 0; j < 4; j++)
             {
-                if(aux == codeBreakerAttempt[j])
+                if(aux == array[j])
                 {
                     i--;
                     break;
@@ -449,12 +450,26 @@ public class GameManager : MonoBehaviour
     void CycleUpCodeBreakerCounter(int value)
     {
         codeBreakerUpCounter = value;
-        codeBreakerUpCounter++;
-        if(codeBreakerUpCounter >= 10)
+        // increase to next available digit
+        for (int i = 0; i < 1; i++)
         {
-            codeBreakerUpCounter = 0;
+            codeBreakerUpCounter++;
+            if(codeBreakerUpCounter >= 10)
+            {
+                codeBreakerUpCounter = 0;
+            }
+            codeBreakerAttempt[codeBreakerSideCounter] = codeBreakerUpCounter;
+            for (int j = 0; j < 4; j++)
+            {
+                if(j != codeBreakerSideCounter)
+                {
+                    if(codeBreakerFinalAttemp[j] == codeBreakerUpCounter)
+                    {
+                        i--;
+                    }
+                }
+            }
         }
-        codeBreakerAttempt[codeBreakerSideCounter] = codeBreakerUpCounter;
     }
     #endregion
     
@@ -462,12 +477,26 @@ public class GameManager : MonoBehaviour
     void CycleDownCodeBreakerCounter(int value)
     {
         codeBreakerUpCounter = value;
-        codeBreakerUpCounter--;
-        if(codeBreakerUpCounter < 0)
+        // increase no next available digit
+        for (int i = 0; i < 1; i++)
         {
-            codeBreakerUpCounter = 9;
+            codeBreakerUpCounter--;
+            if(codeBreakerUpCounter < 0)
+            {
+                codeBreakerUpCounter = 9;
+            }
+            codeBreakerAttempt[codeBreakerSideCounter] = codeBreakerUpCounter;
+            for (int j = 0; j < 4; j++)
+            {
+                if(j != codeBreakerSideCounter)
+                {
+                    if(codeBreakerFinalAttemp[j] == codeBreakerUpCounter)
+                    {
+                        i--;
+                    }
+                }
+            }
         }
-        codeBreakerAttempt[codeBreakerSideCounter] = codeBreakerUpCounter;
     }
     #endregion
     
@@ -479,10 +508,6 @@ public class GameManager : MonoBehaviour
             CycleDownCodeBreakerCounter(codeBreakerAttempt[codeBreakerSideCounter]);
             codeBreakerFinalAttemp[codeBreakerSideCounter] = codeBreakerAttempt[codeBreakerSideCounter];
             finalBulls++;
-            if(codeBreakerSideCounter == 0) SetCodeBreakerMessage("So, " + codeBreakerAttempt[codeBreakerSideCounter] + " is the first digit");
-            else if(codeBreakerSideCounter == 1) SetCodeBreakerMessage(codeBreakerAttempt[codeBreakerSideCounter] + " is the second digit");
-            else if(codeBreakerSideCounter == 2) SetCodeBreakerMessage("Almost there, " + codeBreakerAttempt[codeBreakerSideCounter] + " is the third digit");
-            gamestate = Gamestate.BullFound;
             codeBreakerSideCounter = 0;
         }
     }
