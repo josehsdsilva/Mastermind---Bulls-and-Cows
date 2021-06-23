@@ -44,7 +44,7 @@ public class GameManager : MonoBehaviour
     Gamestate gamestate;
     bool demo = false;
     float deltaTime = 0f;
-    float waitingTime;
+    float waitingTime = 0.5f;
     int[] codeMakerValue = { -1, -1, -1, -1};
     int[] codeBreakerAttempt = { -1, -1, -1, -1};
     int[] codeBreakerFinalAttemp = { -1, -1, -1, -1};
@@ -128,6 +128,14 @@ public class GameManager : MonoBehaviour
                 SetCodeBreakerThink();
             }
         }
+        else if(gamestate == Gamestate.BullFound)
+        {
+            deltaTime += Time.deltaTime;
+            if(deltaTime >= 2 * waitingTime || demo == true)
+            {
+                gamestate = Gamestate.CodeBreakerTry;
+            }
+        }
         else if(gamestate == Gamestate.Win)
         {
             deltaTime += Time.deltaTime;
@@ -147,7 +155,6 @@ public class GameManager : MonoBehaviour
     {
         playButton.SetActive(false);
         demoButton.SetActive(false);
-        waitingTime = 0.25f;
         demo = false;
         deltaTime = 0f;
         gamestate = Gamestate.Intro;
@@ -272,7 +279,7 @@ public class GameManager : MonoBehaviour
     {
         UIUpdateNumberGuessedUI();
         deltaTime = 0;
-        SetCodeMakerMessage("You are correct!");
+        SetCodeMakerMessage("Yes! " + codeBreakerAttempt[0] + codeBreakerAttempt[1] + codeBreakerAttempt[2] + codeBreakerAttempt[3] + " is the correct number!");
         gamestate = Gamestate.Win;
     }
     #endregion
@@ -282,6 +289,7 @@ public class GameManager : MonoBehaviour
     #region CodeBreakerGenerateAttempt
     void CodeBreakerGenerateAttempt()
     {
+        // first time or until having bulls and cows
         if(cows == 0 && bulls == 0 && previousAttemptBulls == 0 && previousAttemptCows == 0)
         {
             for (int i = 0; i < 4; i++)
@@ -289,8 +297,11 @@ public class GameManager : MonoBehaviour
                 codeBreakerAttempt[i] = GenerateValidDigit();
             }
         }
+        // when have bulls but don't know where
         else if(bulls > 0 && bulls > finalBulls)
         {
+            // test if it is a bull -> if the bull count decrease by one after adding one to his value we know it was a bull
+            // if it's not a bull it increases one each turn until it become a bull
             if(codeBreakerFinalAttemp[codeBreakerSideCounter] == -1)
             {
                 CycleUpCodeBreakerCounter(codeBreakerAttempt[codeBreakerSideCounter]);
@@ -301,6 +312,7 @@ public class GameManager : MonoBehaviour
                 CodeBreakerGenerateAttempt();
             }
         }
+        // when have cows try to swap positions until getting a bull
         else if(cows > 0 )
         {
             if(codeBreakerFinalAttemp[codeBreakerSideCounter] == -1)
@@ -324,6 +336,7 @@ public class GameManager : MonoBehaviour
                 CodeBreakerGenerateAttempt();
             }
         }
+        // when don't have nothing go to the first digit with no bull and increase the value by one
         else
         {
             for (int i = 0; i < 4; i++)
@@ -348,6 +361,7 @@ public class GameManager : MonoBehaviour
         int[] aux = new int[4];
         bulls = 0;
         cows = 0;
+        // calculate bulls
         for (int i = 0; i < 4; i++)
         {
             if(codeBreakerAttempt[i] == codeMakerValue[i])
@@ -357,6 +371,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        // calculate cows 
         for (int i = 0; i < 4; i++)
         {
             for (int j = 0; j < 4; j++)
@@ -371,23 +386,24 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        // win condition
         if(bulls >= 4)
         {
             SetWin();
         }
+        // flag for on bull found
         else if(bulls == previousAttemptBulls - 1 && previousAttemptBulls > 0)
         {
             OneBullFound();
         }
         else if(bulls == previousAttemptBulls)
         {
+            // if a cow is found, resets bull value by decreasing the value by one (previoulsy increase by one for testing)
             if(cows == previousAttemptCows - 1)
             {
-                if(codeBreakerFinalAttemp[codeBreakerSideCounter] == -1 && cows <= 3)
-                {
-                    CycleDownCodeBreakerCounter(codeBreakerAttempt[codeBreakerSideCounter]);
-                }
+               CycleDownCodeBreakerCounter(codeBreakerAttempt[codeBreakerSideCounter]);
             }
+            // if no cow found, moves no next digit
             if(cows != previousAttemptCows)
             {
                 CycleSideCodeBreakerCounter();
@@ -463,8 +479,11 @@ public class GameManager : MonoBehaviour
             CycleDownCodeBreakerCounter(codeBreakerAttempt[codeBreakerSideCounter]);
             codeBreakerFinalAttemp[codeBreakerSideCounter] = codeBreakerAttempt[codeBreakerSideCounter];
             finalBulls++;
+            if(codeBreakerSideCounter == 0) SetCodeBreakerMessage("So, " + codeBreakerAttempt[codeBreakerSideCounter] + " is the first digit");
+            else if(codeBreakerSideCounter == 1) SetCodeBreakerMessage(codeBreakerAttempt[codeBreakerSideCounter] + " is the second digit");
+            else if(codeBreakerSideCounter == 2) SetCodeBreakerMessage("Almost there, " + codeBreakerAttempt[codeBreakerSideCounter] + " is the third digit");
+            gamestate = Gamestate.BullFound;
             codeBreakerSideCounter = 0;
-            // gamestate = Gamestate.BullFound;
         }
     }
     #endregion
@@ -477,22 +496,22 @@ public class GameManager : MonoBehaviour
         if(codeBreakerFinalAttemp[0] >= 0)
         {
             UINumberGuessed0.gameObject.SetActive(true);
-            UINumberGuessed0.text = codeBreakerFinalAttemp[0].ToString();
+            UINumberGuessed0.text = codeBreakerAttempt[0].ToString();
         }
         if(codeBreakerFinalAttemp[1] >= 0)
         {
             UINumberGuessed1.gameObject.SetActive(true);
-            UINumberGuessed1.text = codeBreakerFinalAttemp[1].ToString();
+            UINumberGuessed1.text = codeBreakerAttempt[1].ToString();
         }
         if(codeBreakerFinalAttemp[2] >= 0)
         {
             UINumberGuessed2.gameObject.SetActive(true);
-            UINumberGuessed2.text = codeBreakerFinalAttemp[2].ToString();
+            UINumberGuessed2.text = codeBreakerAttempt[2].ToString();
         }
         if(codeBreakerFinalAttemp[3] >= 0)
         {
             UINumberGuessed3.gameObject.SetActive(true);
-            UINumberGuessed3.text = codeBreakerFinalAttemp[3].ToString();
+            UINumberGuessed3.text = codeBreakerAttempt[3].ToString();
         }
     }
     #endregion
